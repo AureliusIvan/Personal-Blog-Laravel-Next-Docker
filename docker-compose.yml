@@ -1,0 +1,71 @@
+version: '3.8'
+services:
+  client:
+    container_name: client # give name to the container instead of random id
+    build:
+      context: ./client
+    ports:
+      - "3000:3000" # map port 3000 on host to port 3000 on container
+    volumes:
+      - ./client:/app # map the client folder to /app in the container
+    command: npm run dev # command that will be run when the container starts
+    networks:
+      - laravel-app
+
+  db:
+    container_name: db
+    image: mysql:latest
+    restart: unless-stopped
+    tty: true
+    ports:
+        - "4306:3306"
+    volumes:
+        - mysql_data:/var/lib/mysql
+        - ./database/my.cnf:/etc/mysql/my.cnf
+    environment:
+        MYSQL_DATABASE: database_react
+        MYSQL_ROOT_PASSWORD: Ham11Bur11
+
+  server:
+    container_name: server
+    build: ./server
+    ports:
+      - "9000:8000"
+    volumes:
+      - ./server:/var/www
+    depends_on:
+      - db
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    networks:
+      - laravel-app
+  nginx:
+    container_name: nginx
+    build: ./nginx
+    ports:
+      - "8080:80"
+      - "8043:443"
+    depends_on:
+      - server
+    networks:
+      - laravel-app
+    volumes:
+      - ./server:/var/www
+      - ./nginx/conf.d:/etc/nginx/conf.d
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - laravel-app
+
+
+
+#Docker Networks
+networks:
+  laravel-app:
+    driver: bridge
+
+volumes:
+    mysql_data: # this is volume for mysql
+        driver: local
